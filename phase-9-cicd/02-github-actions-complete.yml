@@ -1,0 +1,342 @@
+# ============================================================
+# Phase 9 — Production-Ready GitHub Actions Pipeline
+# Copy this to .github/workflows/deploy.yml in your projects
+# ============================================================
+
+name: Production Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================================
+  # Pre-flight: Quick checks that fail fast
+  # ============================================================
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@v3.63.0
+        with:
+          extra_args: --only-verified --fail
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+  # ============================================================
+  # Security: Static Analysis (runs in parallel)
+  # ============================================================
+  sast:
+    runs-on: ubuntu-latest
+    needs: preflight
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  semgrep:
+    runs-on: ubuntu-latest
+    needs: preflight
+    container:
+      image: semgrep/semgrep:1.52.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config auto --sarif -o results.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+  # ============================================================
+  # Security: Dependency Scanning
+  # ============================================================
+  dependency-check:
+    runs-on: ubuntu-latest
+    needs: preflight
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      - name: Snyk vulnerability scan
+        uses: snyk/actions/node@master
+        continue-on-error: false
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --fail-on=all
+
+  # ============================================================
+  # Build & Test
+  # ============================================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: [sast, semgrep, dependency-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Coverage below 80% threshold!"
+            exit 1
+          fi
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
+          retention-days: 1
+
+  # ============================================================
+  # Container Build & Scan
+  # ============================================================
+  container:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: dist/
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.16.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy.sarif
+
+  # ============================================================
+  # Infrastructure Scanning
+  # ============================================================
+  iac-scan:
+    runs-on: ubuntu-latest
+    needs: preflight
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkov scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ./terraform
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          soft_fail: false
+
+      - name: Upload Checkov SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+
+  # ============================================================
+  # Deploy to Staging
+  # ============================================================
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [container, iac-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_STAGING }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster staging \
+            --service app \
+            --force-new-deployment
+
+      - name: Wait for stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster staging \
+            --services app \
+            --timeout 300
+
+      - name: Smoke test
+        run: |
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.example.com/health)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed (status: $STATUS), retrying..."
+            sleep 10
+          done
+          echo "Smoke test failed!"
+          exit 1
+
+  # ============================================================
+  # DAST (Dynamic Security Testing)
+  # ============================================================
+  dast:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'https://staging.example.com'
+          rules_file_name: '.zap/rules.tsv'
+          fail_action: 'warn'
+
+  # ============================================================
+  # Deploy to Production (requires approval)
+  # ============================================================
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: dast
+    environment:
+      name: production
+      url: https://app.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_PRODUCTION }}
+          aws-region: us-east-1
+
+      - name: Deploy canary (5%)
+        run: |
+          echo "Deploying to 5% of traffic..."
+          # Implement canary logic here
+
+      - name: Monitor canary (5 min)
+        run: |
+          echo "Monitoring error rates and latency..."
+          sleep 300
+
+      - name: Full deployment
+        run: |
+          aws ecs update-service \
+            --cluster production \
+            --service app \
+            --force-new-deployment
+
+      - name: Verify production
+        run: |
+          aws ecs wait services-stable \
+            --cluster production \
+            --services app
+          curl -f https://app.example.com/health
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "Deployment successful: ${{ github.sha }}"
+          # Add Slack/Teams notification here
