@@ -17,10 +17,10 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-1-foundations/01-setup-guide.md` | Install Git, Docker, AWS CLI, configure your workstation |
-| `phase-1-foundations/02-first-pipeline.yml` | Your first secure GitHub Actions CI/CD pipeline |
-| `phase-1-foundations/03-concepts-cheatsheet.md` | Key terms, tools map, memory techniques |
-| `phase-1-foundations/04-interview-questions.md` | FAANG interview Q&A with answer frameworks |
+| `phase-01-foundations/01-setup-guide.md` | Install Git, Docker, AWS CLI, configure your workstation |
+| `phase-01-foundations/02-first-pipeline.yml` | Your first secure GitHub Actions CI/CD pipeline |
+| `phase-01-foundations/03-concepts-cheatsheet.md` | Key terms, tools map, memory techniques |
+| `phase-01-foundations/04-interview-questions.md` | FAANG interview Q&A with answer frameworks |
 
 ---
 
@@ -30,8 +30,8 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-2-linux-bash/01-linux-essentials.md` | Essential commands grouped by purpose (grep, awk, sed, find, chmod) |
-| `phase-2-linux-bash/02-log-monitor-advanced.sh` | Advanced security monitoring script (brute force, sudo, SSH, ports) |
+| `phase-02-linux-bash/01-linux-essentials.md` | Essential commands grouped by purpose (grep, awk, sed, find, chmod) |
+| `phase-02-linux-bash/02-log-monitor-advanced.sh` | Advanced security monitoring script (brute force, sudo, SSH, ports) |
 | `log_monitor.sh` | Your first log monitor script (starter version) |
 
 ---
@@ -42,9 +42,9 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-3-python/01-aws-inventory.py` | AWS resource inventory with security audit (EC2, S3, IAM, Security Groups) |
-| `phase-3-python/02-log-analyzer.py` | Security log analyzer — detects brute force, credential stuffing, compromised accounts |
-| `phase-3-python/03-vulnerability-scanner.py` | Dependency vulnerability scanner using OSV API |
+| `phase-03-python/01-aws-inventory.py` | AWS resource inventory with security audit (EC2, S3, IAM, Security Groups) |
+| `phase-03-python/02-log-analyzer.py` | Security log analyzer — detects brute force, credential stuffing, compromised accounts |
+| `phase-03-python/03-vulnerability-scanner.py` | Dependency vulnerability scanner using OSV API |
 
 ---
 
@@ -54,9 +54,9 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-4-sql-security/01-sql-for-devsecops.md` | SQL fundamentals + real-world security queries (brute force, exfiltration, CloudWatch) |
-| `phase-4-sql-security/02-security-db-setup.sql` | Complete database schema + simulated attack scenario data |
-| `phase-4-sql-security/03-practice-exercises.sql` | 8 hands-on exercises — investigate a breach using SQL |
+| `phase-04-sql-security/01-sql-for-devsecops.md` | SQL fundamentals + real-world security queries (brute force, exfiltration, CloudWatch) |
+| `phase-04-sql-security/02-security-db-setup.sql` | Complete database schema + simulated attack scenario data |
+| `phase-04-sql-security/03-practice-exercises.sql` | 8 hands-on exercises — investigate a breach using SQL |
 
 ---
 
@@ -66,7 +66,7 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-5-java/01-java-for-devsecops.md` | Build systems, dependency scanning, secure Dockerfiles for Java, zero-day response |
+| `phase-05-java/01-java-for-devsecops.md` | Build systems, dependency scanning, secure Dockerfiles for Java, zero-day response |
 
 ---
 
@@ -76,8 +76,8 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-6-aws/01-aws-security-fundamentals.md` | IAM policies, VPC architecture, S3 hardening, GuardDuty, Security Hub |
-| `phase-6-aws/02-secure-infrastructure.tf` | Production Terraform: 3-tier VPC, flow logs, security groups, NAT gateway |
+| `phase-06-aws/01-aws-security-fundamentals.md` | IAM policies, VPC architecture, S3 hardening, GuardDuty, Security Hub |
+| `phase-06-aws/02-secure-infrastructure.tf` | Production Terraform: 3-tier VPC, flow logs, security groups, NAT gateway |
 
 ---
 
@@ -87,8 +87,8 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-7-iac/01-terraform-deep-dive.md` | State security, secrets handling, Checkov scanning, drift detection |
-| `phase-7-iac/02-complete-stack.tf` | Full stack: KMS, ECS Fargate, RDS encrypted, IAM least privilege, CloudWatch alarms |
+| `phase-07-iac/01-terraform-deep-dive.md` | State security, secrets handling, Checkov scanning, drift detection |
+| `phase-07-iac/02-complete-stack.tf` | Full stack: KMS, ECS Fargate, RDS encrypted, IAM least privilege, CloudWatch alarms |
 
 ---
 
@@ -98,8 +98,8 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-8-containers-k8s/01-docker-security.md` | Secure Dockerfile (14 rules), Docker Compose hardening, K8s security architecture, incident response |
-| `phase-8-containers-k8s/02-k8s-security-configs.yaml` | 12 production configs: Pod Security Standards, NetworkPolicies, RBAC, Kyverno policies |
+| `phase-08-containers-k8s/01-docker-security.md` | Secure Dockerfile (14 rules), Docker Compose hardening, K8s security architecture, incident response |
+| `phase-08-containers-k8s/02-k8s-security-configs.yaml` | 12 production configs: Pod Security Standards, NetworkPolicies, RBAC, Kyverno policies |
 
 ---
 
@@ -109,9 +109,9 @@ Every folder contains theory, hands-on code, practice exercises, and interview p
 
 | File | Description |
 |------|-------------|
-| `phase-9-cicd/01-cicd-security.md` | Pipeline threat model, security controls, complete pipelines for 3 platforms |
-| `phase-9-cicd/02-github-actions-complete.yml` | Production-ready 7-stage pipeline with all security gates |
-| `phase-9-cicd/03-secrets-management.md` | OIDC, Vault integration, pre-commit detection, leak response playbook |
+| `phase-09-cicd/01-cicd-security.md` | Pipeline threat model, security controls, complete pipelines for 3 platforms |
+| `phase-09-cicd/02-github-actions-complete.yml` | Production-ready 7-stage pipeline with all security gates |
+| `phase-09-cicd/03-secrets-management.md` | OIDC, Vault integration, pre-commit detection, leak response playbook |
 
 ---
 
@@ -201,7 +201,7 @@ git clone https://github.com/Barrie20/devsecops-training-may-2026.git
 cd devsecops-training-may-2026
 
 # Start with Phase 1
-# Open phase-1-foundations/01-setup-guide.md and follow the instructions
+# Open phase-01-foundations/01-setup-guide.md and follow the instructions
 ```
 
 ---
